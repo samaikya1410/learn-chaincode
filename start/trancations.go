@@ -132,15 +132,14 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	current, _ = strconv.Atoi(string(u_count))
 	current = current-1
 	trans, err := stub.GetState(u+strconv.Itoa(current)) 
-	if err != nil {
-        return trans, nil
+	if err == nil {
+        return trans, errors.New("error getting transaction count ")
     }
 
 	// Handle different functions
-	fmt.Println("query did not find func: " + function)						//error
+			//error
 
-	return nil, errors.New("Received unknown function query: " + function)
-}
+	return trans, nil
 
 func (t *SimpleChaincode) read(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	
