@@ -134,7 +134,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
     }
 	current, _ = strconv.Atoi(string(u_count))
 	current = current-1
-	trans, err := stub.GetState(u) 
+	trans, err := stub.GetState(u+strconv.Itoa(current)) 
 	if trans == nil {
         return nil, errors.New("error getting transaction user ")
     }
