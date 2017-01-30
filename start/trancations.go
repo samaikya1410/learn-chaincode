@@ -119,21 +119,24 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	fmt.Println("query is running " + function)
 	var err error
 	var u string
-	var current int
+	//var current int
 	if function != "query" {
 		fmt.Printf("Function is query")
 		return nil, errors.New("Invalid query function name. Expecting \"query\"")
 	}
+	if len(args) != 1 {
+		return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
+	}
 	u = args[0]
-	u_count, err := stub.GetState(u+"trans_count")
-	if err != nil {
-        return nil, err
-    }
-	current, _ = strconv.Atoi(string(u_count))
-	current = current-1
-	trans, err := stub.GetState(u+strconv.Itoa(current)) 
+	//u_count, err := stub.GetState(u+"trans_count")
+	//if err != nil {
+    //    return nil, err
+    //}
+	//current, _ = strconv.Atoi(string(u_count))
+	//current = current-1
+	trans, err := stub.GetState(u) 
 	if err == nil {
-        return trans, errors.New("error getting transaction count ")
+        return nil, errors.New("error getting transaction user ")
     }
 
 	// Handle different functions
