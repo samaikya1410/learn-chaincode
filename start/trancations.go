@@ -61,29 +61,7 @@ type Read struct{
 	Operation string `json:"operation"`
 	Account User `json:"account"`
 }
-//==============================================================================================================================
-//	 get_caller - Retrieves the username of the user who invoked the chaincode.
-//				  Returns the username as a string.
-//==============================================================================================================================
 
-func (t *SimpleChaincode) get_username(stub shim.ChaincodeStubInterface) ([]byte, error) {
-  username, err := stub.ReadCertAttribute("username")
-	if err != nil { return nil, errors.New("Couldn't get attribute 'username'. Error: " + err.Error()) }
-	return username, nil
-}
-
-
-//==============================================================================================================================
-//	 get_caller_data - Calls the get_ecert and check_role functions and returns the ecert and role for the
-//					 name passed.
-//==============================================================================================================================
-
-func (t *SimpleChaincode) get_caller_data(stub shim.ChaincodeStubInterface) ([]byte, error){
-
-	user, err := t.get_username(stub)
-	if err != nil { return  nil, err }
-	return user, nil
-}
 
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	if len(args) != 4{
@@ -142,11 +120,12 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	fmt.Println("query is running " + function)
 
 	if function == "get_user"{
-		caller, err := t.get_caller_data(stub)
-		if err != nil { fmt.Printf("QUERY: Error retrieving caller details", err);
-	 	return nil, errors.New("QUERY: Error retrieving caller details: "+err.Error())
+		username, err := stub.ReadCertAttribute("enrollId")
+		if err != nil {
+			fmt.Printf("QUERY: Error retrieving caller details", err);
+	 		return nil, errors.New("QUERY: Error retrieving caller details: "+err.Error())
 	 	}
-		return caller, nil
+		return username, nil
 	}
 	if function == "get_metadata"{
 		metadata, err := stub.GetCallerMetadata()
