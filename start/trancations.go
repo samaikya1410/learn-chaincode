@@ -148,6 +148,15 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	 	}
 		return caller, nil
 	}
+	if function == "get_metadata"{
+		metadata, err := stub.GetCallerMetadata()
+		fmt.Printf("Assiger role is %v\n", string(metadata))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed getting metadata, [%v]", err)
+		}
+		return metadata, nil
+	}
 	if function == "query" {
 		var err error
 		var u string
