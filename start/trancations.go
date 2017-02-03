@@ -72,31 +72,17 @@ func (t *SimpleChaincode) get_username(stub shim.ChaincodeStubInterface) ([]byte
 	return username, nil
 }
 
-//==============================================================================================================================
-//	 check_affiliation - Takes an ecert as a string, decodes it to remove html encoding then parses it and checks the
-// 				  		certificates common name. The affiliation is stored as part of the common name.
-//==============================================================================================================================
-
-func (t *SimpleChaincode) check_affiliation(stub shim.ChaincodeStubInterface) ([]byte, error) {
-  affiliation, err := stub.ReadCertAttribute("role")
-	if err != nil { return nil, errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
-	return affiliation, nil
-
-}
 
 //==============================================================================================================================
 //	 get_caller_data - Calls the get_ecert and check_role functions and returns the ecert and role for the
 //					 name passed.
 //==============================================================================================================================
 
-func (t *SimpleChaincode) get_caller_data(stub shim.ChaincodeStubInterface) ([]byte, []byte, error){
+func (t *SimpleChaincode) get_caller_data(stub shim.ChaincodeStubInterface) ([]byte, error){
 
 	user, err := t.get_username(stub)
-	affiliation, err := t.check_affiliation(stub)
-
-  if err != nil { return nil, nil, err }
-
-	return user, affiliation, nil
+	if err != nil { return  nil, err }
+	return user, nil
 }
 
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
@@ -156,7 +142,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	fmt.Println("query is running " + function)
 
 	if function == "get_user"{
-		caller, _ , err := t.get_caller_data(stub)
+		caller, err := t.get_caller_data(stub)
 		if err != nil { fmt.Printf("QUERY: Error retrieving caller details", err);
 	 	return nil, errors.New("QUERY: Error retrieving caller details: "+err.Error())
 	 	}
