@@ -45,7 +45,7 @@ type User struct{
 }
 type Register struct{
 	Party string `json:"party"`
-	Operation string `json:"operation"` 
+	Operation string `json:"operation"`
 	Account User `json:"account"`
 }
 type Transfer struct{
@@ -58,8 +58,53 @@ type Transfer struct{
 
 type Read struct{
 	Party string `json:"party"`
-	Operation string `json:"operation"` 
+	Operation string `json:"operation"`
 	Account User `json:"account"`
+}
+//==============================================================================================================================
+//	 get_caller - Retrieves the username of the user who invoked the chaincode.
+//				  Returns the username as a string.
+//==============================================================================================================================
+
+func (t *SimpleChaincode) get_username(stub shim.ChaincodeStubInterface) (string, error) {
+
+    username, err := stub.ReadCertAttribute("username");
+	if err != nil { return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error()) }
+	return string(username), nil
+}
+
+//==============================================================================================================================
+//	 check_affiliation - Takes an ecert as a string, decodes it to remove html encoding then parses it and checks the
+// 				  		certificates common name. The affiliation is stored as part of the common name.
+//==============================================================================================================================
+
+func (t *SimpleChaincode) check_affiliation(stub shim.ChaincodeStubInterface) (string, error) {
+    affiliation, err := stub.ReadCertAttribute("role");
+	if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
+	return string(affiliation), nil
+
+}
+
+//==============================================================================================================================
+//	 get_caller_data - Calls the get_ecert and check_role functions and returns the ecert and role for the
+//					 name passed.
+//==============================================================================================================================
+
+func (t *SimpleChaincode) get_caller_data(stub shim.ChaincodeStubInterface) (string, string, error){
+
+	user, err := t.get_username(stub)
+
+    // if err != nil { return "", "", err }
+
+	// ecert, err := t.get_ecert(stub, user);
+
+    // if err != nil { return "", "", err }
+
+	affiliation, err := t.check_affiliation(stub);
+
+    if err != nil { return "", "", err }
+
+	return user, affiliation, nil
 }
 
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
@@ -102,14 +147,14 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 	// Handle different functions
 	if function == "register" {													//initialize the chaincode state, used as reset
 		return t.Init(stub, "init",args)
-	} 
+	}
 	if function == "read" {
         return t.read(stub,args)
     }
 	if function == "transfer" {
         return t.transfer(stub, args)
     }
-	
+
 	fmt.Println("invoke did not find func: " + function)					//error
 
 	return nil, errors.New("Received unknown function invocation: " + function)
@@ -117,6 +162,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("query is running " + function)
+	caller, caller_affiliation, err := t.get_caller_data(stub)
+	if err != nil { fmt.Printf("QUERY: Error retrieving caller details", err); return nil, errors.New("QUERY: Error retrieving caller details: "+err.Error()) }
 	var err error
 	var u string
 	var current int
@@ -134,20 +181,17 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
     }
 	current, _ = strconv.Atoi(string(u_count))
 	current = current-1
-	trans, err := stub.GetState(u+strconv.Itoa(current)) 
+	trans, err := stub.GetState(u+strconv.Itoa(current))
 	if trans == nil {
         return nil, errors.New("error getting transaction user ")
     }
 
-	// Handle different functions
-			//error
-
 	fmt.Printf("Query Response:%s\n", u)
-	return trans, nil
+	return caller, nil
 }
 
 func (t *SimpleChaincode) read(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	
+
 
 	return nil, nil
 }
@@ -161,7 +205,7 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 	var user1, user2 Register
 	var err error
 	var count1, count2 int
-    trans.Party = args[0]                           
+    trans.Party = args[0]
     trans.Operation = args[1]
 	trans.Sender.Username = args[2]
 	trans.Reciever.Username = args[3]
