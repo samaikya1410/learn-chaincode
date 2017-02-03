@@ -157,6 +157,15 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		}
 		return metadata, nil
 	}
+	if function == "get_cert"{
+		certdata, err := stub.GetCallerCertificate()
+		fmt.Printf("Assiger role is %v\n", string(certdata))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed getting certdatadata, [%v]", err)
+		}
+		return certdata, nil
+	}
 	if function == "query" {
 		var err error
 		var u string
