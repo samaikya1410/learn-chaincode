@@ -66,11 +66,10 @@ type Read struct{
 //				  Returns the username as a string.
 //==============================================================================================================================
 
-func (t *SimpleChaincode) get_username(stub shim.ChaincodeStubInterface) (string, error) {
-
-    username, err := stub.ReadCertAttribute("username");
-	if err != nil { return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error()) }
-	return string(username), nil
+func (t *SimpleChaincode) get_username(stub shim.ChaincodeStubInterface) ([]byte, error) {
+  username, err := stub.ReadCertAttribute("username")
+	if err != nil { return nil, errors.New("Couldn't get attribute 'username'. Error: " + err.Error()) }
+	return username, nil
 }
 
 //==============================================================================================================================
@@ -78,10 +77,10 @@ func (t *SimpleChaincode) get_username(stub shim.ChaincodeStubInterface) (string
 // 				  		certificates common name. The affiliation is stored as part of the common name.
 //==============================================================================================================================
 
-func (t *SimpleChaincode) check_affiliation(stub shim.ChaincodeStubInterface) (string, error) {
-    affiliation, err := stub.ReadCertAttribute("role");
-	if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
-	return string(affiliation), nil
+func (t *SimpleChaincode) check_affiliation(stub shim.ChaincodeStubInterface) ([]byte, error) {
+  affiliation, err := stub.ReadCertAttribute("role")
+	if err != nil { return nil, errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
+	return affiliation, nil
 
 }
 
@@ -90,19 +89,12 @@ func (t *SimpleChaincode) check_affiliation(stub shim.ChaincodeStubInterface) (s
 //					 name passed.
 //==============================================================================================================================
 
-func (t *SimpleChaincode) get_caller_data(stub shim.ChaincodeStubInterface) (string, string, error){
+func (t *SimpleChaincode) get_caller_data(stub shim.ChaincodeStubInterface) ([]byte, []byte, error){
 
 	user, err := t.get_username(stub)
+	affiliation, err := t.check_affiliation(stub)
 
-    // if err != nil { return "", "", err }
-
-	// ecert, err := t.get_ecert(stub, user);
-
-    // if err != nil { return "", "", err }
-
-	affiliation, err := t.check_affiliation(stub);
-
-    if err != nil { return "", "", err }
+  if err != nil { return nil, nil, err }
 
 	return user, affiliation, nil
 }
@@ -162,34 +154,38 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("query is running " + function)
-	caller, caller_affiliation, err := t.get_caller_data(stub)
-	if err != nil { fmt.Printf("QUERY: Error retrieving caller details", err); return nil, errors.New("QUERY: Error retrieving caller details: "+err.Error()) }
-	var err error
-	var u string
-	var current int
-	if function != "query" {
-		fmt.Printf("Function is query")
-		return nil, errors.New("Invalid query function name. Expecting \"query\"")
-	}
-	if len(args) != 1 {
-		return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
-	}
-	u = args[0]
-	u_count, err := stub.GetState(u+"trans_count")
-	if err != nil {
-       return nil, err
-    }
-	current, _ = strconv.Atoi(string(u_count))
-	current = current-1
-	trans, err := stub.GetState(u+strconv.Itoa(current))
-	if trans == nil {
-        return nil, errors.New("error getting transaction user ")
-    }
 
-	fmt.Printf("Query Response:%s\n", u)
-	return caller, nil
+	if function == "get_user"{
+		caller, _ , err := t.get_caller_data(stub)
+		if err != nil { fmt.Printf("QUERY: Error retrieving caller details", err);
+	 	return nil, errors.New("QUERY: Error retrieving caller details: "+err.Error())
+	 	}
+		return caller, nil
+	}
+	if function == "query" {
+		var err error
+		var u string
+		var current int
+		if len(args) != 1 {
+			return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
+		}
+		u = args[0]
+		u_count, err := stub.GetState(u+"trans_count")
+		if err != nil {
+	       return nil, err
+	  }
+		current, _ = strconv.Atoi(string(u_count))
+		current = current-1
+		trans, err := stub.GetState(u+strconv.Itoa(current))
+		if trans == nil {
+	    return nil, errors.New("error getting transaction user ")
+	  }
+
+		fmt.Printf("Query Response:%s\n", u)
+		return trans, nil
+	}
+	return nil,errors.New("function not found")
 }
-
 func (t *SimpleChaincode) read(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
 
