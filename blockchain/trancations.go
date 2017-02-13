@@ -50,7 +50,7 @@ type Transaction struct{
 	Operation string `json:"operation"`
 	Claim_Id string `json:"claim_id"`
 	Bill_Id string `json:"bill_id"`
-	Bill_Details []byte `json:"bill_details"`
+	Bill_Details string `json:"bill_details"`
 	Bill_Status string `json:"bill_status"`
 	Date time.Time `json:"date"`
 }
@@ -133,7 +133,7 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 	tr.Operation = args[1]
 	tr.Claim_Id = args[2]
 	tr.Bill_Id = args[3]
-	tr.Bill_Details = []byte(args[4])
+	tr.Bill_Details = args[4]
 	tr.Bill_Status = args[5]
 	tr.Date = time.Now()
 	tbytes, err := json.Marshal(&tr)
@@ -179,6 +179,13 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 			return nil, fmt.Errorf("Failed getting transaction, [%v]", err)
 		}
 		return transaction, nil
+	}
+	if function == "get_user"{
+		c, err := stub.GetState(args[0])
+		if err != nil {
+	 		return nil, errors.New("cannot get user")
+	 	}
+		return c, nil
 	}
 	return nil, errors.New("Received unknown function" )
 }
