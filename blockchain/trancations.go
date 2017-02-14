@@ -292,7 +292,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		return c, nil
 	}
 	if function == "get_to_be_validated_bills"{
-		t, err := stub.GetTable("to_be_approved_bills")
+		t, err := stub.GetTable("to_be_validated_bills")
 		if err != nil {
 	 		return nil, errors.New("cannot get user")
 	 	}
