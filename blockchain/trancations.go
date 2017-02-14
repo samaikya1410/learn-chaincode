@@ -165,7 +165,7 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 		}
 	}
 
-	if(args[1]=="approve"){
+	if(args[1]=="validate" && args[5]="approved"){
 		if len(args) != 8{
 			return nil, errors.New("Incorrect number of arguments while transacting.")
 		}
