@@ -52,7 +52,7 @@ type Transaction struct{
 	Bill_Id string `json:"bill_id"`
 	Bill_Details string `json:"bill_details"`
 	Bill_Status string `json:"bill_status"`
-	Date time.Time `json:"date"`
+	Date string `json:"date"`
 }
 
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
@@ -77,6 +77,32 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	if err != nil {
         return nil, err
   }
+	err = stub.CreateTable("to_be_approved_bills", []*shim.ColumnDefinition{
+		&shim.ColumnDefinition{Name: "Entity_Name", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Entity_Role", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Claim_Id", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Bill_Id", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Operation", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "Bill_Details", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "Bill_Status", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "Date", Type: shim.ColumnDefinition_STRING, Key: false},
+	})
+	if err != nil {
+		return nil, errors.New("Failed creating approved_bills table")
+	}
+	err = stub.CreateTable("to_be_paid_bills", []*shim.ColumnDefinition{
+		&shim.ColumnDefinition{Name: "Entity_Name", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Entity_Role", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Claim_Id", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Bill_Id", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Operation", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "Bill_Details", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "Bill_Status", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "Date", Type: shim.ColumnDefinition_STRING, Key: false},
+	})
+	if err != nil {
+		return nil, errors.New("Failed creating paid_bills table")
+	}
 	return nil, nil
 }
 
@@ -101,11 +127,94 @@ func (t *SimpleChaincode) register(stub shim.ChaincodeStubInterface, args []stri
 
 
 func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	if len(args) != 6{
+	if len(args) < 6{
 		return nil, errors.New("Incorrect number of arguments while transacting.")
 	}
 	var tr Transaction
 	var user Entity
+	var err error
+	tr.Entity_Involved = user
+	tr.Operation = args[1]
+	tr.Claim_Id = args[2]
+	tr.Bill_Id = args[3]
+	tr.Bill_Details = args[4]
+	tr.Bill_Status = args[5]
+	tr.Date = time.Now().String()
+
+	if(args[1]=="submit"){
+		if len(args) != 6{
+			return nil, errors.New("Incorrect number of arguments while transacting.")
+		}
+		bool, err := stub.InsertRow("to_be_approved_bills", shim.Row{
+			Columns: []*shim.Column{
+				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Name}},
+				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Role}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[2]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[3]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[1]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[4]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[5]}},
+				&shim.Column{Value: &shim.Column_String_{String_: tr.Date}},
+			},
+		})
+		if (!bool && err == nil){
+			return nil, errors.New("already submited")
+		}
+		if (!bool && err != nil){
+			return  nil, err
+		}
+	}
+
+	if(args[1]=="approve"){
+		if len(args) != 8{
+			return nil, errors.New("Incorrect number of arguments while transacting.")
+		}
+		bool, err := stub.InsertRow("to_be_paid_bills", shim.Row{
+			Columns: []*shim.Column{
+				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Name}},
+				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Role}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[2]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[3]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[1]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[4]}},
+				&shim.Column{Value: &shim.Column_String_{String_: args[5]}},
+				&shim.Column{Value: &shim.Column_String_{String_: tr.Date}},
+			},
+		})
+		if (!bool && err == nil){
+			return  nil, errors.New("already approved")
+		}
+		if (!bool && err != nil){
+			return  nil, err
+		}
+		err = stub.DeleteRow("to_be_approved_bills", []shim.Column{
+			shim.Column{Value: &shim.Column_String_{String_: args[6]}},
+			shim.Column{Value: &shim.Column_String_{String_: args[7]}},
+			shim.Column{Value: &shim.Column_String_{String_: args[2]}},
+			shim.Column{Value: &shim.Column_String_{String_: args[3]}},
+		},
+		)
+		if err != nil {
+		return nil, err
+		}
+	}
+
+	if(args[1]=="pay"){
+		if len(args) != 8{
+			return nil, errors.New("Incorrect number of arguments while transacting.")
+		}
+		err = stub.DeleteRow("to_be_paid_bills", []shim.Column{
+			shim.Column{Value: &shim.Column_String_{String_: args[6]}},
+			shim.Column{Value: &shim.Column_String_{String_: args[7]}},
+			shim.Column{Value: &shim.Column_String_{String_: args[2]}},
+			shim.Column{Value: &shim.Column_String_{String_: args[3]}},
+		},
+		)
+		if err != nil {
+		return nil, err
+		}
+	}
+
 	var c int
 	var cstring string
 	//get current transaction count, increment it
@@ -129,13 +238,6 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 	if err != nil {
 			 return nil, err
 	}
-	tr.Entity_Involved = user
-	tr.Operation = args[1]
-	tr.Claim_Id = args[2]
-	tr.Bill_Id = args[3]
-	tr.Bill_Details = args[4]
-	tr.Bill_Status = args[5]
-	tr.Date = time.Now()
 	tbytes, err := json.Marshal(&tr)
 	if err != nil {
 			 return nil, err
@@ -186,6 +288,20 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	 		return nil, errors.New("cannot get user")
 	 	}
 		return c, nil
+	}
+	if function == "get_to_be_approved_bills"{
+		t, err := stub.GetTable("to_be_approved_bills")
+		if err != nil {
+	 		return nil, errors.New("cannot get user")
+	 	}
+		return []byte(t.String()), nil
+	}
+	if function == "get_to_be_paid_bills"{
+		t, err := stub.GetTable("to_be_paid_bills")
+		if err != nil {
+	 		return nil, errors.New("cannot get user")
+	 	}
+		return []byte(t.String()), nil
 	}
 	return nil, errors.New("Received unknown function" )
 }
