@@ -78,26 +78,26 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
         return nil, err
   }
 	err = stub.CreateTable("to_be_validated_bills", []*shim.ColumnDefinition{
+		&shim.ColumnDefinition{Name: "Bill_Status", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Entity_Name", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Entity_Role", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Claim_Id", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Bill_Id", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Operation", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "Bill_Details", Type: shim.ColumnDefinition_STRING, Key: false},
-		&shim.ColumnDefinition{Name: "Bill_Status", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "Date", Type: shim.ColumnDefinition_STRING, Key: false},
 	})
 	if err != nil {
 		return nil, errors.New("Failed creating approved_bills table")
 	}
 	err = stub.CreateTable("to_be_paid_bills", []*shim.ColumnDefinition{
+		&shim.ColumnDefinition{Name: "Bill_Status", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Entity_Name", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Entity_Role", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Claim_Id", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Bill_Id", Type: shim.ColumnDefinition_STRING, Key: true},
 		&shim.ColumnDefinition{Name: "Operation", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "Bill_Details", Type: shim.ColumnDefinition_STRING, Key: false},
-		&shim.ColumnDefinition{Name: "Bill_Status", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "Date", Type: shim.ColumnDefinition_STRING, Key: false},
 	})
 	if err != nil {
@@ -147,13 +147,13 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 		}
 		bool, err := stub.InsertRow("to_be_validated_bills", shim.Row{
 			Columns: []*shim.Column{
+				&shim.Column{Value: &shim.Column_String_{String_: args[5]}},
 				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Name}},
 				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Role}},
 				&shim.Column{Value: &shim.Column_String_{String_: args[2]}},
 				&shim.Column{Value: &shim.Column_String_{String_: args[3]}},
 				&shim.Column{Value: &shim.Column_String_{String_: args[1]}},
 				&shim.Column{Value: &shim.Column_String_{String_: args[4]}},
-				&shim.Column{Value: &shim.Column_String_{String_: args[5]}},
 				&shim.Column{Value: &shim.Column_String_{String_: tr.Date}},
 			},
 		})
@@ -172,13 +172,13 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 		if(args[5]=="approved"){
 			bool, err := stub.InsertRow("to_be_paid_bills", shim.Row{
 				Columns: []*shim.Column{
+					&shim.Column{Value: &shim.Column_String_{String_: args[5]}},
 					&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Name}},
 					&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Role}},
 					&shim.Column{Value: &shim.Column_String_{String_: args[2]}},
 					&shim.Column{Value: &shim.Column_String_{String_: args[3]}},
 					&shim.Column{Value: &shim.Column_String_{String_: args[1]}},
 					&shim.Column{Value: &shim.Column_String_{String_: args[4]}},
-					&shim.Column{Value: &shim.Column_String_{String_: args[5]}},
 					&shim.Column{Value: &shim.Column_String_{String_: tr.Date}},
 				},
 			})
@@ -190,6 +190,7 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 			}
 		}
 		err = stub.DeleteRow("to_be_validated_bills", []shim.Column{
+			shim.Column{Value: &shim.Column_String_{String_: "received"}},
 			shim.Column{Value: &shim.Column_String_{String_: args[6]}},
 			shim.Column{Value: &shim.Column_String_{String_: args[7]}},
 			shim.Column{Value: &shim.Column_String_{String_: args[2]}},
@@ -206,6 +207,7 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 			return nil, errors.New("Incorrect number of arguments while transacting.")
 		}
 		err = stub.DeleteRow("to_be_paid_bills", []shim.Column{
+			shim.Column{Value: &shim.Column_String_{String_: "approved"}},
 			shim.Column{Value: &shim.Column_String_{String_: args[6]}},
 			shim.Column{Value: &shim.Column_String_{String_: args[7]}},
 			shim.Column{Value: &shim.Column_String_{String_: args[2]}},
@@ -292,11 +294,21 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		return c, nil
 	}
 	if function == "get_to_be_validated_bills"{
-		t, err := stub.GetTable("to_be_validated_bills")
+		rows, err := stub.GetRows("to_be_validated_bills",[]shim.Column{
+			shim.Column{Value: &shim.Column_String_{String_: "received"}},
+		},
+		)
 		if err != nil {
-	 		return nil, errors.New("cannot get user")
+	 		return nil, errors.New("cannot get rows")
 	 	}
-		return []byte(t.String()), nil
+		var c,i int
+		var rowstring []string
+		c = len(rows)
+		for i=0; i<c ;i++ {
+			row := <- rows
+			rowstring[i] = row.String()
+		}
+		return []byte(rowstring), nil
 	}
 	if function == "get_to_be_paid_bills"{
 		t, err := stub.GetTable("to_be_paid_bills")
