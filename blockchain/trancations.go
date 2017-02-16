@@ -296,7 +296,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	}
 	if function == "get_to_be_validated_bills"{
 		rows, err := stub.GetRows("to_be_validated_bills",[]shim.Column{
-			shim.Column{Value: &shim.Column_String_{String_: "received"}},
+			shim.Column{Value: &shim.Column_String_{String_: "Received"}},
 		},
 		)
 		if err != nil {
