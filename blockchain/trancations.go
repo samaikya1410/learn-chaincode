@@ -54,6 +54,29 @@ type Transaction struct{
 	Bill_Status string `json:"bill_status"`
 	Date string `json:"date"`
 }
+type Approve_bill struct{
+	Provider_Name string `json:"provider_name"`
+	Provider_Role string `json:"provider_role"`
+	Claim_Id string `json:"claim_id"`
+	Bill_Id string `json:"bill_id"`
+	Operation string `json:"operation"`
+	Bill_Details string `json:"bill_details"`
+	Bill_Status string `json:"bill_status"`
+	Date string `json:"date"`
+}
+type Pay_bill struct{
+	Vendor_Name string `json:"vendor_name"`
+	Provider_Name string `json:"provider_name"`
+	Provider_Role string `json:"provider_role"`
+	Claim_Id string `json:"claim_id"`
+	Bill_Id string `json:"bill_id"`
+	Approver_Name string `json:"approver_name"`
+	Approver_Role string `json:"approver_role"`
+	Operation string `json:"operation"`
+	Bill_Details string `json:"bill_details"`
+	Bill_Status string `json:"bill_status"`
+	Date string `json:"date"`
+}
 
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	if len(args) != 0{
@@ -314,29 +337,81 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		if err != nil {
 	 		return nil, errors.New("cannot get rows")
 	 	}
-		var rowstrings []string
+		//var rowstrings []string
+		var list_of_approve_bills []Approve_bill
+		var approve_bill Approve_bill
 		for {
 			select {
 			case row, ok := <-rowChannel:
 				if !ok {
 					rowChannel = nil
 				} else {
-					rowstrings = append(rowstrings, row.String())
+					//rowstrings = append(rowstrings, row.String())
+					approve_bill.Provider_Name = row.Columns[0].GetString_()
+					approve_bill.Provider_Role = row.Columns[1].GetString_()
+					approve_bill.Claim_Id = row.Columns[2].GetString_()
+					approve_bill.Bill_Id = row.Columns[3].GetString_()
+					approve_bill.Operation = row.Columns[4].GetString_()
+					approve_bill.Bill_Details = row.Columns[5].GetString_()
+					approve_bill.Bill_Status = row.Columns[6].GetString_()
+					approve_bill.Date = row.Columns[6].GetString_()
+					list_of_approve_bills = append(list_of_approve_bills, approve_bill)
 				}
 			}
 			if rowChannel == nil{
 				break
 			}
 		}
-		jsonrows, err := json.Marshal(rowstrings)
+		approve_bill_bytes, err := json.Marshal(list_of_approve_bills)
 		if err != nil {
 			return nil, fmt.Errorf("rows operation failed. Error marshaling JSON: %s", err)
 		}
-		return jsonrows, nil
+		return approve_bill_bytes, nil
 	}
 
 	if function == "get_to_be_paid_bills"{
+		var vendor = args[0]
+		var rowChannel  <-chan shim.Row
+		rowChannel, err := stub.GetRows("to_be_paid_bills", []shim.Column{
+			shim.Column{Value: &shim.Column_String_{String_: vendor}},
+		})
+		if err != nil {
+	 		return nil, errors.New("cannot get rows")
+	 	}
+		//var rowstrings []string
+		var list_of_pay_bills []Pay_bill
+		var pay_bill Pay_bill
+		for {
+			select {
+			case row, ok := <-rowChannel:
+				if !ok {
+					rowChannel = nil
+				} else {
+					//rowstrings = append(rowstrings, row.String())
+					pay_bill.Vendor_Name = row.Columns[0].GetString_()
+					pay_bill.Provider_Name = row.Columns[1].GetString_()
+					pay_bill.Provider_Role = row.Columns[2].GetString_()
+					pay_bill.Claim_Id = row.Columns[3].GetString_()
+					pay_bill.Bill_Id = row.Columns[4].GetString_()
+					pay_bill.Approver_Name = row.Columns[5].GetString_()
+					pay_bill.Approver_Role = row.Columns[6].GetString_()
+					pay_bill.Operation = row.Columns[7].GetString_()
+					pay_bill.Bill_Details = row.Columns[8].GetString_()
+					pay_bill.Bill_Status = row.Columns[9].GetString_()
+					pay_bill.Date = row.Columns[10].GetString_()
 
+					list_of_pay_bills = append(list_of_pay_bills, pay_bill)
+				}
+			}
+			if rowChannel == nil{
+				break
+			}
+		}
+		pay_bill_bytes, err := json.Marshal(list_of_pay_bills)
+		if err != nil {
+			return nil, fmt.Errorf("rows operation failed. Error marshaling JSON: %s", err)
+		}
+		return pay_bill_bytes, nil
 	}
 	return nil, errors.New("Received unknown function" )
 }
