@@ -178,7 +178,7 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 	tr.Bill_Status = args[5]
 	tr.Date = time.Now().String()
 
-	if(tr.Operation == "Submit"){
+	if (tr.Operation == "Submit"){
 		bool, err := stub.InsertRow("to_be_validated_bills", shim.Row{
 			Columns: []*shim.Column{
 				&shim.Column{Value: &shim.Column_String_{String_: user.Entity_Name}},
@@ -192,18 +192,18 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 			},
 		})
 		if (!bool && err == nil){
-			return nil, errors.New("already submited")
+			return nil, errors.New("already submitted")
 		}
 		if (!bool && err != nil){
 			return  nil, errors.New("could not insert row in to_be_validated_bills")
 		}
 	}
 
-	if(tr.Operation == "Validate"){
+	if (tr.Operation == "Validate") {
 		var provider_name, provider_role string
 		provider_name = args[6]
 		provider_role = args[7]
-		if(tr.Bill_Status == "Approved"){
+		if (tr.Bill_Status == "Approved" || tr.Bill_Status == "Partially approved"){
 			vendorbytes, err := stub.GetState(args[6])
 			if err != nil {
 					 return nil, errors.New("cannot get vendor")
@@ -354,7 +354,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 					approve_bill.Operation = row.Columns[4].GetString_()
 					approve_bill.Bill_Details = row.Columns[5].GetString_()
 					approve_bill.Bill_Status = row.Columns[6].GetString_()
-					approve_bill.Date = row.Columns[6].GetString_()
+					approve_bill.Date = row.Columns[7].GetString_()
 					list_of_approve_bills = append(list_of_approve_bills, approve_bill)
 				}
 			}
