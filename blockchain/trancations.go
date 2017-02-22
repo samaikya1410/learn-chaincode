@@ -176,7 +176,10 @@ func (t *SimpleChaincode) transact(stub shim.ChaincodeStubInterface, args []stri
 	tr.Operation = args[3]
 	tr.Bill_Details = args[4]
 	tr.Bill_Status = args[5]
-	tr.Date = time.Now().String()
+	// This date is used to indicate the layout.
+  const layout = "02-Jan-2006 15:04:05"
+    // Format Now with the layout const.
+	tr.Date = time.Now().Format(layout)
 
 	if (tr.Operation == "Submit"){
 		bool, err := stub.InsertRow("to_be_validated_bills", shim.Row{
